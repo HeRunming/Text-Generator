@@ -76,3 +76,7 @@ class LocalModelGenerator:
         dataframe.to_json(self.output_file,orient="records",lines=True,force_ascii=False)
         return
     
+    def generate_text_from_input(self,questions: list[str]) -> list[str]:
+        full_prompts = [self.prompt + '\n' + question for question in questions]
+        responses = self.llm.generate(full_prompts, self.sampling_params)
+        return [output.outputs[0].text for output in responses]

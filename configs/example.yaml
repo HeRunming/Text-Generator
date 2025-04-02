@@ -1,7 +1,10 @@
-device: "cuda"
-model_name_or_path: "meta-llama/Meta-Llama-3-8B-Instruct"
-input_file: "data/input.jsonl"
-output_file: "data/output.jsonl"
-input_prompt_key: "prompt"
-output_text_key: "response"
+model_type: "local"
+
+local_model_generator:
+    device: "cuda"
+    model_name_or_path: "meta-llama/Meta-Llama-3-8B-Instruct"
+    input_file: "data/input.jsonl"
+    output_file: "data/output.jsonl"
+    input_prompt_key: "prompt"
+    output_text_key: "response"
 

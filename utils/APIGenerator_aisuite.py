@@ -40,7 +40,7 @@ class APIGenerator_aisuite:
 
 
     
-    def generate_batch(self):
+    def generate_text(self):
         client = ai.Client()
         models = self.model_id.split(',')
         outputs = []
@@ -85,3 +85,28 @@ class APIGenerator_aisuite:
         dataframe = pd.read_json(self.input_file,lines=True)
         dataframe[self.output_text_key] = outputs
         dataframe.to_json(self.output_file,orient='records',lines=True,force_ascii=False)
+
+    def generate_text_from_input(self,questions: list[str]) -> list[str]:
+        client = ai.Client()
+        outputs = []
+        for question in questions:
+            messages = [
+                {"role": "system", "content": self.prompt},
+                {"role": "user", "content": question}
+            ]
+            response = client.chat.completions.create(
+                model=self.model_id,
+                messages=messages,
+                temperature=self.temperature,
+                top_p = self.top_p,
+                max_tokens = self.max_tokens,
+                n = self.n,
+                stream = self.stream,
+                stop = self.stop,
+                logprobs = self.logprobs,
+                presence_penalty = self.presence_penalty,
+                frequency_penalty = self.frequency_penalty,
+            )
+            content = response.choices[0].message.content
+            outputs.append(content)
+        return outputs

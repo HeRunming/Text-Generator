@@ -1,7 +1,38 @@
-device: "cuda"
-model_name_or_path: "meta-llama/Meta-Llama-3-8B-Instruct"
 input_file: "data/input.jsonl"
 output_file: "data/output.jsonl"
-input_prompt_key: "prompt"
-output_text_key: "response"
+input_key: "prompt"
+output_key: "response"
+algorithm: "QuestionSynthesis"
+
+model_type: LocalModelGenerator
+configs:
+  - device: "cuda" # device to run the model on
+    model_path: "Qwen/Qwen2.5-0.5B-Instruct" # path to the local model
+    n: 1 # number of generated sequences
+    best_of: null  # best of sampling
+    presence_penalty: 0  # presence penalty
+    frequency_penalty: 0  # frequency penalty
+    repetition_penalty: 1  # repetition penalty
+    temperature: 1 # temperature for sampling
+    top_p: 1 # top-p sampling
+    top_k: -1 # top-k sampling
+    min_p: 0 # minimum probability
+    seed: null # random seed
+    stop: null # stop sequence
+    stop_token_ids: null # stop token ids
+    ignore_eos: False
+    max_tokens: 32
+    min_tokens: 0
+    logprobs: null
+    prompt_logprobs: null
+    detokenize: True
+    skip_special_tokens: True
+    spaces_between_special_tokens: True
+    logits_processors: null
+    include_stop_str_in_output: False
+    truncate_prompt_tokens: null
+    logit_bias: null # Dict[int,float]
+    allowed_token_ids: null  # List[int]
+    download_dir: "ckpr/models/"
+    prompt: "You are a helpful assistant" #system prompt for the model
 

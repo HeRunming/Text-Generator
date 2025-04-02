@@ -1,18 +1,14 @@
-from utils.LocalModelGenerator import LocalModelGenerator
-import yaml
 import logging
+import pandas as pd
+from utils.Prompts import FormatPrompt
 
 class Formatexample:
-    def __init__(self,
-                 config_path = "config.yaml",
-                 ):
-        self.config = self.load_config(config_path)
+    def __init__(self,config):
+        self.config = config
+        self.prompts = FormatPrompt
 
-    def load_config(self,config_path):
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
-        return config
-
-    def generate_example(self):
-        generator = LocalModelGenerator(**self.config)
+    def _reformat_prompt(self):
+        """
+        reformat input jsonl's prompt for each algorithm, then save into input jsonl file
+        """
         return

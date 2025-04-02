@@ -30,6 +30,7 @@ class LocalModelGenerator:
             repo_id=model_name_or_path,
             local_dir=f"{download_dir}{model_name_or_path}",
         )
+        logging.info(f"Model will be loaded from {self.real_model_path}")
         self.sampling_params = SamplingParams(
             temperature=temperature,
             top_p=top_p,

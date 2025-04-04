@@ -1,0 +1,3 @@
+[submodule "xVerify_custom"]
+	path = xVerify_custom
+	url = https://github.com/IAAR-Shanghai/xVerify.git

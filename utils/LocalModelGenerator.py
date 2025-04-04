@@ -7,25 +7,26 @@ class LocalModelGenerator:
     '''
     A class for generating text using vllm, with model from huggingface or local directory
     '''
-    def __init__(
-            self,
-            device: str = "cuda",
-            model_name_or_path: str = None,
-            temperature: float = 0.7,
-            top_p: float = 0.9,
-            max_tokens: int = 100,
-            top_k: int = 40,
-            repetition_penalty: float = 1.0,
-            seed: int = 42,
-            prompt: str = "You are a helpful assistant",
-            download_dir: str = "ckpr/models/",
-            max_model_len: int = 4096,
-            input_file: str = None,
-            output_file: str = None,
-            input_prompt_key: str = "prompt",
-            output_text_key: str = "response",
-    ):
-        self.device = device
+    def __init__(self, config: dict):
+        configs = config.configs[0]
+
+        device = configs.get("device", "cuda")
+        model_name_or_path = configs.get("model_path", None)
+        temperature = configs.get("temperature", 0.7)
+        top_p = configs.get("top_p", 0.9)
+        max_tokens = configs.get("max_tokens", 512)
+        top_k = configs.get("top_k", 40)
+        repetition_penalty = configs.get("repetition_penalty", 1.0)
+        seed = configs.get("seed", 42)
+        prompt = configs.get("prompt", "You are a helpful assistant")
+        download_dir = configs.get("download_dir", "ckpr/models/")
+        max_model_len = configs.get("max_model_len", 4096)
+
+        input_file = config.get("input_file", None)
+        output_file = config.get("output_file", None)
+        input_prompt_key = config.get("input_key", "prompt")
+        output_text_key = config.get("output_key", "response")
+
         self.real_model_path = snapshot_download(
             repo_id=model_name_or_path,
             local_dir=f"{download_dir}{model_name_or_path}",
@@ -41,7 +42,7 @@ class LocalModelGenerator:
         )
         self.llm = LLM(
             model=self.real_model_path,
-            device=self.device,
+            device=device,
             max_model_len=max_model_len,
         )
         self.prompt = prompt

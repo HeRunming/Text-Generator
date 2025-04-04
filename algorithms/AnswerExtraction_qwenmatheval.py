@@ -324,8 +324,8 @@ def extract_answer(pred_str, data_name, use_last_number=True):
 
     # choice answer
     if (
-        data_name in ["sat_math", "aqua"]
-        or "mmlu" in data_name
+        data_name and
+        (data_name in ["sat_math", "aqua"] or "mmlu" in data_name)
     ):
         tmp = re.findall(r"\b(A|B|C|D|E)\b", pred.upper())
         if tmp:
@@ -387,6 +387,9 @@ class AnswerExtraction_qwenmatheval:
         logging.info(f"Found {len(raw_dataframe)} rows in the dataframe")
         extractions = []
         for response in tqdm(raw_dataframe[self.response_key], desc='processed'):
-            extractions.append(run_execute(response, self.data_name))
+            if isinstance(response, list):
+                extractions.append([run_execute(resp, self.data_name) for resp in response])
+            else:
+                extractions.append(run_execute(response, self.data_name))
         raw_dataframe[self.extraction_key] = extractions
         raw_dataframe.to_json(self.output_file, orient='records', lines=True)

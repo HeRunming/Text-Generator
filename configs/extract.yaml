@@ -1,0 +1,4 @@
+input_file: "/mnt/petrelfs/niujunbo/dhj/Text-Generator/examples/data/test_qwen25-math-cot_-1_seed42_t0.0_s0_e-1.jsonl"
+output_file: "/mnt/petrelfs/niujunbo/dhj/Text-Generator/examples/data/test_qwen25_extracted.jsonl"
+response_key: "code"
+extraction_key: "extract"

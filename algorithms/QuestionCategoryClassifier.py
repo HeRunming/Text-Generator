@@ -41,22 +41,22 @@ class QuestionCategoryClassifier():
         formatted_prompts = self._reformat_prompt(dataframe)
         responses = model.generate_text_from_input(formatted_prompts)
 
-        for (idx, row), classification_str in zip(dataframe.iterrows(), responses):            
-            try:
-                classification = json.loads(classification_str) if classification_str else {}
+        # for (idx, row), classification_str in zip(dataframe.iterrows(), responses):            
+        #     try:
+        #         classification = json.loads(classification_str) if classification_str else {}
 
-                dataframe.at[idx, "primary_category"] = classification.get("primary_category", "")
-                dataframe.at[idx, "secondary_category"] = classification.get("secondary_category", "")
+        #         dataframe.at[idx, "primary_category"] = classification.get("primary_category", "")
+        #         dataframe.at[idx, "secondary_category"] = classification.get("secondary_category", "")
 
-            except json.JSONDecodeError:
-                print(f"[警告] JSON 解析失败，收到的分类数据: {classification_str}")
-            except Exception as e:
-                print(f"[错误] 解析分类结果失败: {e}")
+        #     except json.JSONDecodeError:
+        #         print(f"[警告] JSON 解析失败，收到的分类数据: {classification_str}")
+        #     except Exception as e:
+        #         print(f"[错误] 解析分类结果失败: {e}")
 
-            except json.JSONDecodeError:
-                print(f"JSON 解析失败，收到的分类数据: {classification_str}")
-            except Exception as e:
-                print(f"解析分类结果失败: {e}")
+        #     except json.JSONDecodeError:
+        #         print(f"JSON 解析失败，收到的分类数据: {classification_str}")
+        #     except Exception as e:
+        #         print(f"解析分类结果失败: {e}")
 
 
         if self.config.output_key in dataframe.columns:

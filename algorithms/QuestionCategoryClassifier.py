@@ -67,8 +67,7 @@ class QuestionCategoryClassifier():
         # Generate responses using the model
         responses = self.model.generate_text_from_input(formatted_prompts)
 
-        # Parse and store the classification results
-        for (idx, row), classification_str in zip(dataframe.iterrows(), responses):
+        for (idx, row), classification_str in zip(dataframe.iterrows(), responses):            
             try:
                 classification = json.loads(classification_str) if classification_str else {}
 
@@ -80,12 +79,17 @@ class QuestionCategoryClassifier():
             except Exception as e:
                 print(f"[错误] 解析分类结果失败: {e}")
 
-        # Ensure output_key doesn't already exist in the dataframe
-        if self.output_key in dataframe.columns:
-            raise ValueError(f"Found {self.output_key} in the dataframe, which would overwrite an existing column. Please use a different output_key.")
+            except json.JSONDecodeError:
+                print(f"JSON 解析失败，收到的分类数据: {classification_str}")
+            except Exception as e:
+                print(f"解析分类结果失败: {e}")
 
-        # Ensure output directory exists
-        output_dir = os.path.dirname(self.output_file)
+
+        if self.config.output_key in dataframe.columns:
+            key_list = dataframe.columns.tolist()
+            raise ValueError(f"Found {self.output_text_key} in the dataframe, which leads to overwriting the existing column, please check the output_text_key: {key_list}")
+        
+        output_dir = os.path.dirname(self.config.output_file)
         os.makedirs(output_dir, exist_ok=True)
 
         # Save DataFrame to the output file

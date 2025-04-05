@@ -19,7 +19,7 @@ class AnswerGenerater_reasoning:
         self.check_config()
         self.db = TinyDB(self.config['db_path'])
         logging.info(f"DB path: {self.config['db_path']}")
-
+        self.max_workers = self.config.get('max_workers',4)
 
     def check_config(self):
         # check if necessary keys are in the config

@@ -4,364 +4,221 @@ import logging
 import re
 from word2number import w2n
 
-#####################################################
-##################    qwen-math   ###################
-#####################################################
+# Helper Class for String Processing
+class StringProcessor:
+    """
+    A class that encapsulates various string processing functions for mathematical expressions.
+    """
 
-def _fix_fracs(string):
-    substrs = string.split("\\frac")
-    new_str = substrs[0]
-    if len(substrs) > 1:
-        substrs = substrs[1:]
-        for substr in substrs:
-            new_str += "\\frac"
-            if len(substr) > 0 and substr[0] == "{":
-                new_str += substr
-            else:
-                try:
-                    assert len(substr) >= 2
-                except:
-                    return string
-                a = substr[0]
-                b = substr[1]
-                if b != "{":
-                    if len(substr) > 2:
-                        post_substr = substr[2:]
-                        new_str += "{" + a + "}{" + b + "}" + post_substr
-                    else:
-                        new_str += "{" + a + "}{" + b + "}"
+    @staticmethod
+    def _fix_fracs(string):
+        """
+        Fixes fraction expressions in the string, ensuring they are properly formatted as \frac{a}{b}.
+        """
+        substrs = string.split("\\frac")
+        new_str = substrs[0]
+        if len(substrs) > 1:
+            for substr in substrs[1:]:
+                new_str += "\\frac"
+                if len(substr) > 0 and substr[0] == "{":
+                    new_str += substr
                 else:
-                    if len(substr) > 2:
-                        post_substr = substr[2:]
-                        new_str += "{" + a + "}" + b + post_substr
+                    if len(substr) >= 2:
+                        a, b = substr[0], substr[1]
+                        if b != "{":
+                            new_str += f"{{{a}}}{{{b}}}{substr[2:]}" if len(substr) > 2 else f"{{{a}}}{{{b}}}"
+                        else:
+                            new_str += f"{{{a}}}{b}{substr[2:]}" if len(substr) > 2 else f"{{{a}}}{b}"
                     else:
-                        new_str += "{" + a + "}" + b
-    string = new_str
-    return string
+                        return string
+        return new_str
 
-def _fix_a_slash_b(string):
-    if len(string.split("/")) != 2:
+    @staticmethod
+    def _fix_a_slash_b(string):
+        """
+        Fixes cases where a fraction is represented as a simple division (e.g., a/b) and converts it to \frac{a}{b}.
+        """
+        if len(string.split("/")) != 2:
+            return string
+        a, b = string.split("/")
+        try:
+            a, b = int(a) if "sqrt" not in a else a, int(b) if "sqrt" not in b else b
+            assert string == f"{a}/{b}"
+            return f"\\frac{{{a}}}{{{b}}}"
+        except:
+            return string
+
+    @staticmethod
+    def _fix_sqrt(string):
+        """
+        Ensures that square root expressions are properly formatted as \sqrt{...}.
+        """
+        return re.sub(r"\\sqrt(\w+)", r"\\sqrt{\1}", string)
+
+    @staticmethod
+    def convert_word_number(text: str) -> str:
+        """
+        Converts a word representation of a number to a digit.
+        """
+        try:
+            return str(w2n.word_to_num(text))
+        except:
+            return text
+
+
+# Unit Text Class to Manage Unit Texts
+class UnitTextManager:
+    """
+    A class that encapsulates unit text management to remove unwanted unit terms from strings.
+    """
+
+    def __init__(self):
+        """
+        Initializes the unit texts and their plural forms.
+        """
+        self.unit_texts = [
+            "east", "degree", "mph", "kmph", "ft", "m sqaure", "m east", "sq m", "deg", "mile", "q .", "monkey", "prime",
+            "ratio", "profit of rs", "rd", "o", "gm", "p . m", "lb", "tile", "per", "dm", "lt", "gain", "ab", "way", "west",
+            "a .", "b .", "c .", "d .", "e .", "f .", "g .", "h .", "t", "a", "h", "no change", "men", "soldier", "pie", "bc",
+            "excess", "st", "inches", "noon", "percent", "by", "gal", "kmh", "c", "acre", "rise", "a . m", "th", "π r 2", "sq",
+            "mark", "l", "toy", "coin", "sq . m", "gallon", "° f", "profit", "minw", "yr", "women", "feet", "am", "pm", "hr",
+            "cu cm", "square", "v â € ™", "are", "rupee", "rounds", "cubic", "cc", "mtr", "s", "ohm", "number", "kmph", "day",
+            "hour", "minute", "min", "second", "man", "woman", "sec", "cube", "mt", "sq inch", "mp", "∏ cm ³", "hectare",
+            "more", "sec", "unit", "cu . m", "cm 2", "rs .", "rs", "kg", "g", "month", "km", "m", "cm", "mm", "apple", "liter",
+            "loss", "yard", "pure", "year", "increase", "decrease", "d", "less", "Surface", "litre", "pi sq m", "s .", "metre",
+            "meter", "inch",
+        ]
+        self.unit_texts.extend([t + "s" for t in self.unit_texts])
+
+    def clean_units(self, string: str):
+        """
+        Cleans the string by removing unit terms from it.
+        """
+        for unit_text in self.unit_texts:
+            string = re.sub(r"(^|\W)" + unit_text + r"($|\W)", r"\1\2", string)
         return string
-    a = string.split("/")[0]
-    b = string.split("/")[1]
-    try:
-        if "sqrt" not in a:
-            a = int(a)
-        if "sqrt" not in b:
-            b = int(b)
-        assert string == "{}/{}".format(a, b)
-        new_string = "\\frac{" + str(a) + "}{" + str(b) + "}"
-        return new_string
-    except:
+
+
+# Main String Processing Class
+class StringCleaner:
+    """
+    A class responsible for cleaning and formatting strings in mathematical expressions.
+    """
+
+    def __init__(self, unit_manager: UnitTextManager):
+        """
+        Initializes the StringCleaner class with a unit manager.
+        """
+        self.unit_manager = unit_manager
+
+    def strip_string(self, string, skip_unit=False):
+        """
+        Strips unwanted characters and units from the string.
+        """
+        string = str(string).strip().replace("\n", "").rstrip(".").replace("\\!", "")
+        string = re.sub(r"\\begin\{array\}\{.*?\}", r"\\begin{pmatrix}", string)
+        string = re.sub(r"\\end\{array\}", r"\\end{pmatrix}", string).replace("bmatrix", "pmatrix")
+        string = string.replace("tfrac", "frac").replace("dfrac", "frac").replace("\\neq", "\\ne").replace("\\leq", "\\le").replace("\\geq", "\\ge")
+        string = string.replace("\\left", "").replace("\\right", "").replace("\\{", "{").replace("\\}", "}")
+        
+        # Clean unit texts if needed
+        if not skip_unit:
+            string = self.unit_manager.clean_units(string)
+
+        string = string.replace("^{\\circ}", "").replace("^\\circ", "").replace("\\$", "").replace("$", "").replace("\\(", "").replace("\\)", "")
+        string = StringProcessor.convert_word_number(string)
+        string = re.sub(r"\\text\{(.*?)\}", r"\1", string)
+        
+        for key in ["x=", "y=", "z=", "x\\in", "y\\in", "z\\in", "x\\to", "y\\to", "z\\to"]:
+            string = string.replace(key, "")
+        
+        string = string.replace("\\emptyset", r"{}").replace("(-\\infty,\\infty)", "\\mathbb{R}")
+        string = string.replace("%", "").replace(" .", " 0.").replace("{.", "{0.")
+        
         return string
 
-def _fix_sqrt(string):
-    _string = re.sub(r"\\sqrt(\w+)", r"\\sqrt{\1}", string)
-    return _string
 
-def convert_word_number(text: str) -> str:
-    try:
-        text = str(w2n.word_to_num(text))
-    except:
-        pass
-    return text
+# Core Answer Extraction Logic Class
+class AnswerExtractor:
+    """
+    A class responsible for extracting the final answer from a prediction string.
+    """
 
-# units mainly from MathQA
-unit_texts = [
-    "east", "degree", "mph", "kmph", "ft", "m sqaure", " m east", "sq m",
-    "deg", "mile", "q .", "monkey", "prime", "ratio", "profit of rs",
-    "rd", "o", "gm", "p . m", "lb", "tile", "per", "dm", "lt", "gain", "ab",
-    "way", "west", "a .", "b .", "c .", "d .", "e .", "f .", "g .",
-    "h .", "t", "a", "h", "no change", "men", "soldier", "pie", "bc",
-    "excess", "st", "inches", "noon", "percent", "by", "gal", "kmh",
-    "c", "acre", "rise", "a . m", "th", "π r 2", "sq", "mark", "l", "toy",
-    "coin", "sq . m", "gallon", "° f", "profit", "minw", "yr", "women",
-    "feet", "am", "pm", "hr", "cu cm", "square", "v â € ™", "are", "rupee",
-    "rounds", "cubic", "cc", "mtr", "s", "ohm", "number", "kmph", "day",
-    "hour", "minute", "min", "second", "man", "woman", "sec", "cube",
-    "mt", "sq inch", "mp", "∏ cm ³", "hectare", "more", "sec", "unit",
-    "cu . m", "cm 2", "rs .", "rs", "kg", "g", "month", "km", "m", "cm",
-    "mm", "apple", "liter", "loss", "yard", "pure", "year", "increase",
-    "decrease", "d", "less", "Surface", "litre", "pi sq m", "s .", "metre",
-    "meter", "inch",
-]
+    def __init__(self, string_cleaner: StringCleaner):
+        """
+        Initializes the AnswerExtractor class with a string cleaner.
+        """
+        self.string_cleaner = string_cleaner
 
-unit_texts.extend([t + "s" for t in unit_texts])
-
-def strip_string(string, skip_unit=False):
-    string = str(string).strip()
-    # linebreaks
-    string = string.replace("\n", "")
-
-    # right "."
-    string = string.rstrip(".")
-
-    # remove inverse spaces
-    # replace \\ with \
-    string = string.replace("\\!", "")
-    # string = string.replace("\\ ", "")
-    # string = string.replace("\\\\", "\\")
-
-    # matrix
-    string = re.sub(r"\\begin\{array\}\{.*?\}", r"\\begin{pmatrix}", string)
-    string = re.sub(r"\\end\{array\}", r"\\end{pmatrix}", string)
-    string = string.replace("bmatrix", "pmatrix")
-
-    # replace tfrac and dfrac with frac
-    string = string.replace("tfrac", "frac")
-    string = string.replace("dfrac", "frac")
-    string = (
-        string.replace("\\neq", "\\ne")
-        .replace("\\leq", "\\le")
-        .replace("\\geq", "\\ge")
-    )
-
-    # remove \left and \right
-    string = string.replace("\\left", "")
-    string = string.replace("\\right", "")
-    string = string.replace("\\{", "{")
-    string = string.replace("\\}", "}")
-
-    # Remove unit: miles, dollars if after is not none
-    _string = re.sub(r"\\text{.*?}$", "", string).strip()
-    if _string != "" and _string != string:
-        # print("Warning: unit not removed: '{}' -> '{}'".format(string, _string))
-        string = _string
-
-    if not skip_unit:
-        # Remove unit: texts
-        for _ in range(2):
-            for unit_text in unit_texts:
-                # use regex, the prefix should be either the start of the string or a non-alphanumeric character
-                # the suffix should be either the end of the string or a non-alphanumeric character
-                _string = re.sub(r"(^|\W)" + unit_text + r"($|\W)", r"\1\2", string)
-                if _string != "":
-                    string = _string
-
-    # Remove circ (degrees)
-    string = string.replace("^{\\circ}", "")
-    string = string.replace("^\\circ", "")
-
-    # remove dollar signs
-    string = string.replace("\\$", "")
-    string = string.replace("$", "")
-    string = string.replace("\\(", "").replace("\\)", "")
-
-    # convert word number to digit
-    string = convert_word_number(string)
-
-    # replace "\\text{...}" to "..."
-    string = re.sub(r"\\text\{(.*?)\}", r"\1", string)
-    for key in ["x=", "y=", "z=", "x\\in", "y\\in", "z\\in", "x\\to", "y\\to", "z\\to"]:
-        string = string.replace(key, "")
-    string = string.replace("\\emptyset", r"{}")
-    string = string.replace("(-\\infty,\\infty)", "\\mathbb{R}")
-
-    # remove percentage
-    string = string.replace("\\%", "")
-    string = string.replace("\%", "")
-    string = string.replace("%", "")
-
-    # " 0." equivalent to " ." and "{0." equivalent to "{." Alternatively, add "0" if "." is the start of the string
-    string = string.replace(" .", " 0.")
-    string = string.replace("{.", "{0.")
-
-    # cdot
-    # string = string.replace("\\cdot", "")
-    if (
-        string.startswith("{")
-        and string.endswith("}")
-        and string.isalnum()
-        or string.startswith("(")
-        and string.endswith(")")
-        and string.isalnum()
-        or string.startswith("[")
-        and string.endswith("]")
-        and string.isalnum()
-    ):
-        string = string[1:-1]
-
-    # inf
-    string = string.replace("infinity", "\\infty")
-    if "\\infty" not in string:
-        string = string.replace("inf", "\\infty")
-    string = string.replace("+\\inity", "\\infty")
-
-    # and
-    string = string.replace("and", "")
-    string = string.replace("\\mathbf", "")
-
-    # use regex to remove \mbox{...}
-    string = re.sub(r"\\mbox{.*?}", "", string)
-
-    # quote
-    string.replace("'", "")
-    string.replace('"', "")
-
-    # i, j
-    if "j" in string and "i" not in string:
-        string = string.replace("j", "i")
-
-    # replace a.000b where b is not number or b is end, with ab, use regex
-    string = re.sub(r"(\d+)\.0*([^\d])", r"\1\2", string)
-    string = re.sub(r"(\d+)\.0*$", r"\1", string)
-
-    # if empty, return empty string
-    if len(string) == 0:
-        return string
-    if string[0] == ".":
-        string = "0" + string
-
-    # to consider: get rid of e.g. "k = " or "q = " at beginning
-    if len(string.split("=")) == 2:
-        if len(string.split("=")[0]) <= 2:
-            string = string.split("=")[1]
-
-    string = _fix_sqrt(string)
-    string = string.replace(" ", "")
-
-    # \frac1b or \frac12 --> \frac{1}{b} and \frac{1}{2}, etc. Even works with \frac1{72} (but not \frac{72}1). Also does a/b --> \\frac{a}{b}
-    string = _fix_fracs(string)
-
-    # NOTE: X/Y changed to \frac{X}{Y} in dataset, but in simple cases fix in case the model output is X/Y
-    string = _fix_a_slash_b(string)
-
-    return string
-
-direct_answer_trigger_for_fewshot = ("choice is", "answer is")
-
-def choice_answer_clean(pred: str):
-    pred = pred.strip("\n")
-
-    # Determine if this is ICL, if so, use \n\n to split the first chunk.
-    ICL = False
-    for trigger in direct_answer_trigger_for_fewshot:
-        if pred.count(trigger) > 1:
-            ICL = True
-    if ICL:
-        pred = pred.split("\n\n")[0]
-
-    # Split the trigger to find the answer.
-    preds = re.split("|".join(direct_answer_trigger_for_fewshot), pred)
-    if len(preds) > 1:
-        answer_flag = True
-        pred = preds[-1]
-    else:
-        answer_flag = False
-
-    pred = pred.strip("\n").rstrip(".").rstrip("/").strip(" ").lstrip(":")
-
-    # Clean the answer based on the dataset
-    tmp = re.findall(r"\b(A|B|C|D|E)\b", pred.upper())
-    if tmp:
-        pred = tmp
-    else:
-        pred = [pred.strip().strip(".")]
-
-    if len(pred) == 0:
-        pred = ""
-    else:
-        if answer_flag:
-            # choose the first element in list ...
-            pred = pred[0]
+    def extract_answer(self, pred_str, data_name, use_last_number=True):
+        """
+        Extracts the final answer from the prediction string, processing various formats.
+        """
+        pred_str = pred_str.replace("\u043a\u0438", "")
+        
+        # Handle special cases based on data_name or pattern
+        if "final answer is $" in pred_str and "$. I hope" in pred_str:
+            pred = pred_str.split("final answer is $", 1)[1].split("$. I hope", 1)[0].strip()
+        elif "boxed" in pred_str:
+            pred = self._extract_boxed_answer(pred_str)
+        elif "he answer is" in pred_str:
+            pred = pred_str.split("he answer is")[-1].strip()
         else:
-            # choose the last e
-            pred = pred[-1]
+            pred = self._get_last_number_answer(pred_str, use_last_number)
+        
+        pred = self.string_cleaner.strip_string(pred, skip_unit=data_name in ["carp_en", "minerva_math"])
+        return pred
 
-    # Remove the period at the end, again!
-    pred = pred.rstrip(".").rstrip("/")
-
-    return pred
-
-def extract_answer(pred_str, data_name, use_last_number=True):
-    pred_str = pred_str.replace("\u043a\u0438", "")
-    if data_name in ["mmlu_stem", "sat_math", "aqua", "gaokao2023"]:
-        # TODO check multiple choice
-        return choice_answer_clean(pred_str)
-
-    if "final answer is $" in pred_str and "$. I hope" in pred_str:
-        # minerva_math
-        tmp = pred_str.split("final answer is $", 1)[1]
-        pred = tmp.split("$. I hope", 1)[0].strip()
-    elif "boxed" in pred_str:
+    def _extract_boxed_answer(self, pred_str):
+        """
+        Extracts answers enclosed in 'boxed' notation.
+        """
         ans = pred_str.split("boxed")[-1]
-        if len(ans) == 0:
-            return ""
-        elif ans[0] == "{":
-            stack = 1
-            a = ""
-            for c in ans[1:]:
-                if c == "{":
-                    stack += 1
-                    a += c
-                elif c == "}":
-                    stack -= 1
-                    if stack == 0:
-                        break
-                    a += c
-                else:
-                    a += c
+        if ans.startswith("{"):
+            return self._extract_bracketed_answer(ans)
         else:
-            a = ans.split("$")[0].strip()
-        pred = a
-    elif "he answer is" in pred_str:
-        pred = pred_str.split("he answer is")[-1].strip()
-    elif "final answer is" in pred_str:
-        pred = pred_str.split("final answer is")[-1].strip()
-    elif "答案是" in pred_str:
-        # Handle Chinese few-shot multiple choice problem answer extraction
-        pred = pred_str.split("答案是")[1].strip().split("\n\n")[0].strip()
-    else:  # use the last number
+            return ans.split("$")[0].strip()
+
+    def _extract_bracketed_answer(self, ans):
+        """
+        Handles answers that are enclosed within brackets.
+        """
+        stack = 1
+        result = ""
+        for c in ans[1:]:
+            if c == "{":
+                stack += 1
+                result += c
+            elif c == "}":
+                stack -= 1
+                if stack == 0:
+                    break
+                result += c
+            else:
+                result += c
+        return result
+
+    def _get_last_number_answer(self, pred_str, use_last_number):
+        """
+        Extracts the last number from the string if use_last_number is True.
+        """
         if use_last_number:
             pattern = "-?\d*\.?\d+"
             pred = re.findall(pattern, pred_str.replace(",", ""))
-            if len(pred) >= 1:
-                pred = pred[-1]
-            else:
-                pred = ""
-        else:
-            pred = ""
+            return pred[-1] if pred else ""
+        return ""
 
-    # choice answer
-    if (
-        data_name and
-        (data_name in ["sat_math", "aqua"] or "mmlu" in data_name)
-    ):
-        tmp = re.findall(r"\b(A|B|C|D|E)\b", pred.upper())
-        if tmp:
-            pred = tmp[-1]
-        else:
-            pred = pred.strip().strip(".")
 
-    # multiple line
-    # pred = pred.split("\n")[0]
-    pred = re.sub(r"\n\s*", "", pred)
-    if pred != "" and pred[0] == ":":
-        pred = pred[1:]
-    if pred != "" and pred[-1] == ".":
-        pred = pred[:-1]
-    if pred != "" and pred[-1] == "/":
-        pred = pred[:-1]
-    pred = strip_string(pred, skip_unit=data_name in ["carp_en", "minerva_math"])
-    return pred
-
-STRIP_EXCEPTIONS = ["carp_en", "minerva_math"]
-
-def run_execute(result, data_name):
-    if not result or result == "error":
-        return None, None
-
-    prediction = extract_answer(result, data_name)
-
-    prediction = strip_string(prediction, skip_unit=data_name in STRIP_EXCEPTIONS)
-    return prediction
-
-#####################################################
-##################    qwen-math   ###################
-#####################################################
-
+# The main class to manage the entire extraction process
 class AnswerExtraction_qwenmatheval:
+    """
+    A class to handle the process of extracting answers from a dataset.
+    """
+
     def __init__(self, config: dict):
+        """
+        Initializes the AnswerExtraction_qwenmatheval class.
+        """
         self.config = config
         self._check_config()
         self.input_file = self.config['input_file']
@@ -369,27 +226,31 @@ class AnswerExtraction_qwenmatheval:
         self.response_key = self.config['response_key']
         self.extraction_key = self.config['extraction_key']
         self.data_name = self.config.get('dataset_name', None)
-    
+
+        # Initialize helpers
+        unit_manager = UnitTextManager()
+        string_cleaner = StringCleaner(unit_manager)
+        self.answer_extractor = AnswerExtractor(string_cleaner)
+
     def _check_config(self):
-        required_keys = [
-            'input_file', 'output_file',
-            'response_key', 'extraction_key',
-        ]
+        """
+        Ensures that the configuration contains all necessary keys.
+        """
+        required_keys = ['input_file', 'output_file', 'response_key', 'extraction_key']
         for key in required_keys:
             if key not in self.config:
-                raise ValueError(f"Key {key} is not in the config")
-    
+                raise ValueError(f"Key {key} is missing in the config")
+
     def run(self):
+        """
+        Executes the answer extraction process.
+        """
         raw_dataframe = pd.read_json(self.input_file, lines=True)
         key_list = raw_dataframe.columns.to_list()
         if self.response_key not in key_list:
-            raise ValueError(f"response_key: {self.response_key} not found in the dataframe, please check the input_key: {key_list}")
-        logging.info(f"Found {len(raw_dataframe)} rows in the dataframe")
-        extractions = []
-        for response in tqdm(raw_dataframe[self.response_key], desc='processed'):
-            if isinstance(response, list):
-                extractions.append([run_execute(resp, self.data_name) for resp in response])
-            else:
-                extractions.append(run_execute(response, self.data_name))
+            raise ValueError(f"response_key: {self.response_key} not found in dataframe columns.")
+        
+        logging.info(f"Found {len(raw_dataframe)} rows.")
+        extractions = [self.answer_extractor.extract_answer(resp, self.data_name) for resp in tqdm(raw_dataframe[self.response_key], desc='Processing')]
         raw_dataframe[self.extraction_key] = extractions
         raw_dataframe.to_json(self.output_file, orient='records', lines=True)

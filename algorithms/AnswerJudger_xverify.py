@@ -1,8 +1,8 @@
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
-from xVerify_custom.src.xVerify.model import Model
-from xVerify_custom.src.xVerify.custommodel import Model_custom
-from xVerify_custom.src.xVerify.eval import Evaluator
+from xVerify_Custom.src.xVerify.model import Model
+from xVerify_Custom.src.xVerify.custommodel import Model_custom
+from xVerify_Custom.src.xVerify.eval import Evaluator
 
 
 class AnswerJudger_xverify:

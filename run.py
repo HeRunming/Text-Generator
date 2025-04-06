@@ -3,6 +3,8 @@ from argparse import ArgumentError
 from jsonargparse import ActionConfigFile, ArgumentParser
 from algorithms.QuestionGenerator import QuestionGenerator
 from algorithms.QuestionCategoryClassifier import QuestionCategoryClassifier
+from algorithms.QuestionDifficultyClassifier import QuestionDifficultyClassifier
+import yaml
 
 def init_config(args=None):
     """Initialize new configuration with updated settings."""
@@ -34,9 +36,11 @@ def main():
     """
     Main function to initialize configuration and run the pipeline.
     """
-    config = init_config()
-    algorithm =config["algorithm"]
-    algorithm = QuestionCategoryClassifier(config)
+    # config = init_config()
+    with open("./configs/example.yaml", "r") as f:
+        config = yaml.safe_load(f)
+    configs = config['configs']
+    algorithm = QuestionDifficultyClassifier(configs)
     algorithm.run()
 
     

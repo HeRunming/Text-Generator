@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from utils import LocalModelGenerator, APIGenerator_aisuite, APIGenerator_request
 from utils.Prompts import QuestionCategoryPrompt
+import re
 
 class QuestionCategoryClassifier():
     def __init__(self, config):
@@ -67,29 +68,36 @@ class QuestionCategoryClassifier():
         # Generate responses using the model
         responses = self.model.generate_text_from_input(formatted_prompts)
 
-        for (idx, row), classification_str in zip(dataframe.iterrows(), responses):            
+        for (idx, row), classification_str in zip(dataframe.iterrows(), responses):
             try:
-                classification = json.loads(classification_str) if classification_str else {}
+                if not classification_str:
+                    raise ValueError("空字符串")
+
+                # 去除 Markdown 代码块包裹
+                cleaned_str = re.sub(r"^```json\s*|\s*```$", "", classification_str.strip(), flags=re.DOTALL)
+
+                # 去除非 ASCII 字符（可选）
+                cleaned_str = re.sub(r"[^\x00-\x7F]+", "", cleaned_str)
+
+                classification = json.loads(cleaned_str)
 
                 dataframe.at[idx, "primary_category"] = classification.get("primary_category", "")
                 dataframe.at[idx, "secondary_category"] = classification.get("secondary_category", "")
 
             except json.JSONDecodeError:
-                print(f"[警告] JSON 解析失败，收到的分类数据: {classification_str}")
+                print(f"[警告] JSON 解析失败，收到的原始数据: {repr(classification_str)}")
             except Exception as e:
                 print(f"[错误] 解析分类结果失败: {e}")
-
-            except json.JSONDecodeError:
-                print(f"JSON 解析失败，收到的分类数据: {classification_str}")
-            except Exception as e:
-                print(f"解析分类结果失败: {e}")
+                print(f"[DEBUG] 原始字符串：{repr(classification_str)}")
 
 
-        if self.config.output_key in dataframe.columns:
+
+
+        if self.output_key in dataframe.columns:
             key_list = dataframe.columns.tolist()
-            raise ValueError(f"Found {self.output_text_key} in the dataframe, which leads to overwriting the existing column, please check the output_text_key: {key_list}")
+            raise ValueError(f"Found {self.output_key} in the dataframe, which leads to overwriting the existing column, please check the output_text_key: {key_list}")
         
-        output_dir = os.path.dirname(self.config.output_file)
+        output_dir = os.path.dirname(self.output_file)
         os.makedirs(output_dir, exist_ok=True)
 
         # Save DataFrame to the output file

@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from utils import LocalModelGenerator, APIGenerator_aisuite, APIGenerator_request
 from utils.Prompts import QuestionDifficultyPrompt
+import re
 
 class QuestionDifficultyClassifier():
     def __init__(self, config):
@@ -11,6 +12,17 @@ class QuestionDifficultyClassifier():
         """
         self.config = config
         self.prompts = QuestionDifficultyPrompt()
+        self.input_file = self.config.get("input_file")
+        self.output_file = self.config.get("output_file")
+        self.input_key = self.config.get("input_key", "question")  # default key for question input
+        self.output_key = self.config.get("output_key", "classification_result")  # default output key
+        
+        # Ensure input_file and output_file are provided
+        if not self.input_file or not self.output_file:
+            raise ValueError("Both input_file and output_file must be specified in the config.")
+
+        # Initialize the model
+        self.model = self.__init_model__()
     
     def __init_model__(self):
         """
@@ -45,19 +57,24 @@ class QuestionDifficultyClassifier():
 
     def run(self):
         # read input file : accept jsonl file only
-        dataframe = pd.read_json(self.config.input_file,lines=True)
+        dataframe = pd.read_json(self.input_file,lines=True)
         model = self.__init_model__()
         formatted_prompts = self._reformat_prompt(dataframe)
         responses = model.generate_text_from_input(formatted_prompts)
 
+        rating_scores = []
+        for response in responses:
+            match = re.search(r'Rating:\s*([\d.]+)', response)
+            score = float(match.group(1)) if match else None
+            rating_scores.append(score)
 
-        if self.config.output_key in dataframe.columns:
+        if self.output_key in dataframe.columns:
             key_list = dataframe.columns.tolist()
             raise ValueError(f"Found {self.output_text_key} in the dataframe, which leads to overwriting the existing column, please check the output_text_key: {key_list}")
         
-        dataframe[self.output_key] = responses
+        dataframe[self.output_key] = rating_scores
         
-        output_dir = os.path.dirname(self.config.output_file)
+        output_dir = os.path.dirname(self.output_file)
         os.makedirs(output_dir, exist_ok=True)
 
             # Save DataFrame to the output file

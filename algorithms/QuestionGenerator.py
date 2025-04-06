@@ -71,6 +71,7 @@ class QuestionGenerator():
         Run the question generation process.
         """
         try:
+            
             # Read the input file (jsonl format only)
             dataframe = pd.read_json(self.input_file, lines=True)
 

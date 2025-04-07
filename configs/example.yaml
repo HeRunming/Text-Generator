@@ -1,10 +1,10 @@
-input_file: "data/input.jsonl"
-output_file: "data/output.jsonl"
-input_key: "prompt"
+input_file: "examples/data/amc23.jsonl"
+output_file: "examples/data/amc23_synthesis.jsonl"
+input_key: "problem"
 output_key: "response"
 algorithm: "QuestionSynthesis"
 
-model_type: LocalModelGenerator
+generator_type: "local"
 configs:
   - device: "cuda" # device to run the model on
     model_path: "Qwen/Qwen2.5-0.5B-Instruct" # path to the local model
@@ -36,3 +36,22 @@ configs:
     download_dir: "ckpr/models/"
     prompt: "You are a helpful assistant" #system prompt for the model
 
+# input_file: "examples/data/amc23.jsonl"
+# output_file: examples/data/amc23_diff_api.jsonl"
+# input_key: "response"
+# output_key: "solution"
+# algorithm: "AnswerGenerater_reasoning"
+
+# generator_type: "request"
+# configs:
+#   system_prompt: ""
+#   input_key: "problem"
+#   output_key: "response"
+#   model_name: "gpt-4o-mini"
+#   api_url: "http://123.129.219.111:3000/v1/chat/completions"
+#   api_key: 'sk-bpQKw8OdWE1o8U2aDDw705dVa12iiMZv3wSzU9yXMUM7bNFd'
+#   db_path: "/root/workspace/culfjk4p420c73amv510/herunming/Text-Generator/examples/db/amc23_db.json"
+#   max_workers: 20
+#   input_file: "examples/data/amc23.jsonl"
+#   output_file: "examples/data/amc23_diff_api.jsonl"
+#   generator_type: "request"

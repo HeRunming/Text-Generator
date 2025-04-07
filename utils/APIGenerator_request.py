@@ -14,8 +14,8 @@ class APIGenerator_request:
         logging.info(f"DB path: {self.config['db_path']}")
         
         # Get API key from environment variable or config
-        self.api_url = self.config.get("api_url", "http://123.129.219.111:3000/v1/chat/completions")
-        self.api_key = self.config.get("api_key", "")
+        self.api_url = self.config.get("api_url", None)
+        self.api_key = self.config.get("api_key", None)
         if self.api_key == "":
             self.api_key = os.environ.get("API_KEY")
         if self.api_key is None:

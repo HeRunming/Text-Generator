@@ -115,23 +115,51 @@ class APIGenerator_request:
         raw_dataframe.to_json(self.config['output_file'], orient='records', lines=True, force_ascii=False)
 
     def generate_text_from_input(self, questions: list[str]) -> list[str]:
-        responses = [None] * len(questions)  # 创建一个与问题数量一致的列表，用来存储结果
+        def api_chat_with_id(system_info: str, messages: str, model: str, id):
+            try:
+                payload = json.dumps({
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": system_info},
+                        {"role": "user", "content": messages}
+                    ]
+                })
 
+                headers = {
+                    'Authorization': f"Bearer {self.api_key}",
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'Apifox/1.0.0 (https://apifox.com)'
+                }
+                # Make a POST request to the API
+                response = requests.post(self.api_url, headers=headers, data=payload, timeout=1800)
+                if response.status_code == 200:
+                    #logging.info(f"API request successful")
+                    response_data = response.json()
+                    # logging.info(f"API response: {response_data['choices'][0]['message']['content']}")
+                    return id,response_data['choices'][0]['message']['content']
+                else:
+                    logging.error(f"API request failed with status {response.status_code}: {response.text}")
+                    return id,None
+            except Exception as e:
+                logging.error(f"API request error: {e}")
+                return id,None
+        responses = [None] * len(questions)
+        
         # 使用 ThreadPoolExecutor 并行处理多个问题
+        logging.info(f"Generating {len(questions)} responses")
         with ThreadPoolExecutor(max_workers=self.config['max_workers']) as executor:
-            futures = []
-            for idx, question in enumerate(questions):
-                futures.append(
-                    executor.submit(
-                        self.api_chat,
+            futures = [executor.submit(
+                        api_chat_with_id,
                         self.config['system_prompt'],
                         question,
                         self.config['model_name'],
-                    )
-                )
+                        idx
+                    ) for idx, question in enumerate(questions)]
             
-            for idx, future in enumerate(as_completed(futures)):
+            for future in as_completed(futures):
                 response = future.result()
-                responses[idx] = response  # 将响应放到正确的索引位置，确保顺序一致
-
+                responses[response[0]] = response[1]
+                # for debug
+                # logging.info(f"Get {response[0]} responses")
+        logging.info(f"Generated {len(responses)} responses")
         return responses

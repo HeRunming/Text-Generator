@@ -1,0 +1,11 @@
+input_file: "examples/data/amc23.jsonl"
+output_file: "examples/data/amc23_synth.jsonl"
+input_key: "question"
+output_key: "generated_question"
+generator_type: "request"
+api_url: "http://123.129.219.111:3000/v1/chat/completions"
+api_key: 'sk-of58V1mbhxLxQDLLUXrYW9HLX1tmfaPKKwDP55mm3LcAYaV3'
+db_path : "examples/db/amc23_test.json"
+max_workers: 100
+model_name: "gpt-4o"
+system_prompt: ""

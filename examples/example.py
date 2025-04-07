@@ -7,7 +7,7 @@ from algorithms.AnswerGenerater_reasoning import AnswerGenerater_reasoning
 logging.basicConfig(level=logging.INFO)
 
 def main():
-    with open("../configs/reasoning.yaml", "r") as f:
+    with open("configs/reasoning.yaml", "r") as f:
         config = yaml.safe_load(f)
     
     algorithm_name = config['algorithm']

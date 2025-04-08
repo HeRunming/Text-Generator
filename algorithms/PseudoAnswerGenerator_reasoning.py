@@ -163,14 +163,20 @@ class PseudoAnswerGenerator_reasoning:
         
         # save dataframe to file
         answer_dict = defaultdict(list)
+        solution_dict = defaultdict(list)
         for item in self.db.all():
             extraction = self.extractor.answer_extractor.extract_answer(item['content'], self.extractor.data_name)
             answer_dict[item['id'].split("_")[0]].append(extraction)
-        raw_dataframe['extracted_answers'] = raw_dataframe.get('extracted_answers', None) 
+            solution_dict[item['id'].split("_")[0]].append((extraction, item['content']))
+        raw_dataframe['extracted_answers'] = raw_dataframe.get('extracted_answers', None)
+        raw_dataframe['correct_solutions'] = raw_dataframe.get('correct_solutions', None) 
         for key, value in answer_dict.items():
-            raw_dataframe.at[int(key),"extracted_answers"] = value
             count = Counter(value)
-            raw_dataframe.at[int(key),"final_answer"] = count.most_common(1)[0][0]
+            final_answer = count.most_common(1)[0][0]
+            raw_dataframe.at[int(key),"extracted_answers"] = value
+            raw_dataframe.at[int(key),"final_answer"] = final_answer
+            correct_contents = [content for ans, content in solution_dict[key] if ans == final_answer]
+            raw_dataframe.at[int(key), "correct_solutions"] = correct_contents
         raw_dataframe.to_json(self.config['output_file'], orient='records', lines=True)
 
 

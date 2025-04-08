@@ -47,15 +47,21 @@ class PseudoAnswerGenerator:
         # generate text
         user_prompts = dataframe[self.input_key].tolist()
         answer_dict = defaultdict(list)
+        solution_dict = defaultdict(list)
         for i in range(self.max_times):
-            answers = self.model_generator.generate_text_from_input(user_prompts)
-            answers = [self.extractor.answer_extractor.extract_answer(answer, self.extractor.data_name) for answer in answers]
+            solutions = self.model_generator.generate_text_from_input(user_prompts)
+            answers = [self.extractor.answer_extractor.extract_answer(solution, self.extractor.data_name) for solution in solutions]
             for idx, answer in enumerate(answers):
                 answer_dict[idx].append(answer)
+                solution_dict[idx].append((answer, solutions[idx]))
         dataframe['extracted_answers'] = dataframe.get('extracted_answers', None) 
+        dataframe['correct_solutions'] = dataframe.get('correct_solutions', None) 
         for key, value in answer_dict.items():
-            dataframe.at[int(key),"extracted_answers"] = value
             count = Counter(value)
-            dataframe.at[int(key),"final_answer"] = count.most_common(1)[0][0]
+            final_answer = count.most_common(1)[0][0]
+            dataframe.at[int(key),"extracted_answers"] = value
+            dataframe.at[int(key),"final_answer"] = final_answer
+            correct_contents = [content for ans, content in solution_dict[key] if ans == final_answer]
+            dataframe.at[int(key), "correct_solutions"] = correct_contents
         dataframe.to_json(self.output_file,orient="records",lines=True)
 

@@ -1,12 +1,14 @@
-input_file: '/clean_prm_sftData.json'
+input_file: '/gsm8k.jsonl'
 task_name: 'math'
 file: 'math_500'
-output_file: 'test'
+output_file: 'test2.jsonl'
+served_model_name: 'Qwen2-3B-Instruct'
 openai_api_key: 'EMPTY'
-openai_api_base: 'http://localhost:8002/v1'
+openai_api_base: 'http://localhost:80/v1'
 propose_method: 'llama'
 value_method: 'local'
 mode: 'mcts'
+worker_number: 64
 temperature: 0.7
 time_limit: null
 iteration_limit: 8
@@ -29,4 +31,3 @@ select_branch: 2
 max_depth: 8
 select_method: 'greedy'
 consistency: true
-VALUE_BASE_MODEL_DIR: 'peiyi9979/math-shepherd-mistral-7b-prm'
